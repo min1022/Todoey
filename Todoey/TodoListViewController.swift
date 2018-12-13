@@ -16,7 +16,7 @@ class TodoListViewController: UITableViewController {
     
     
 
-    let itemArray = ["Find Mike", "Buy Eggs", "Destroy demogorgon"]
+    var itemArray = ["Find Mike", "Buy Eggs", "Destroy demogorgon"]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,7 +26,44 @@ class TodoListViewController: UITableViewController {
         tableView.register(TodoCell.self, forCellReuseIdentifier: cellId)
 //        tableView.backgroundColor = UIColor(white: 0.95, alpha: 1)
         tableView.backgroundColor = .white
+        
+        naviTabAdd()
     }
+    
+    
+    
+    //MARK: Add new items
+    func naviTabAdd() {
+        
+        let addBtn = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(cellAdd(_:)))
+        
+        navigationItem.setRightBarButtonItems([addBtn], animated: true)
+    }
+    
+    @objc func cellAdd(_ sender: UIBarButtonItem) {
+        
+        var textField = UITextField() //alert.add ...에 접근 가능
+        
+        let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: "Add item", style: .default) { (action) in
+            self.itemArray.append(textField.text!)
+            
+            self.tableView.reloadData()
+        }
+        
+        alert.addTextField { (alertTextField) in //클로져 생성
+            alertTextField.placeholder = "Create new item"
+            textField = alertTextField
+            
+        } //얼러트 팝업에 텍스트뷰 삽입
+        
+        
+        alert.addAction(action)
+        
+        present(alert, animated: true, completion: nil)
+    }
+    
 
     //Mark - tableview DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
