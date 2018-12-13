@@ -12,7 +12,7 @@ class TodoListViewController: UITableViewController {
     
     let cellId = "cellId"
     
-
+    let defaults = UserDefaults.standard
     
     
 
@@ -28,6 +28,12 @@ class TodoListViewController: UITableViewController {
         tableView.backgroundColor = .white
         
         naviTabAdd()
+        
+        if let items = defaults.array(forKey: "TodoListArray") as? [String] {//데이터가 nil일시 충돌날 수 도 있으므로 if let으로 옵셔널 바인딩
+        
+            itemArray = items
+        
+        }
     }
     
     
@@ -48,9 +54,10 @@ class TodoListViewController: UITableViewController {
         
         let action = UIAlertAction(title: "Add item", style: .default) { (action) in
             self.itemArray.append(textField.text!)
+            self.defaults.set(self.itemArray, forKey: "TodoListArray")
             
             self.tableView.reloadData()
-        }
+        } //클로져 안에서 사용하므로 self.를 써줘야함
         
         alert.addTextField { (alertTextField) in //클로져 생성
             alertTextField.placeholder = "Create new item"
