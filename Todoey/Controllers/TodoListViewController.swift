@@ -14,9 +14,7 @@ class TodoListViewController: UITableViewController {
     
     let defaults = UserDefaults.standard
     
-    
-
-    var itemArray = ["Find Mike", "Buy Eggs", "Destroy demogorgon"]
+    var itemArray = [Item]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,14 +27,18 @@ class TodoListViewController: UITableViewController {
         
         naviTabAdd()
         
-        if let items = defaults.array(forKey: "TodoListArray") as? [String] {//데이터가 nil일시 충돌날 수 도 있으므로 if let으로 옵셔널 바인딩
+        let newItem = Item()
+        newItem.title = "ㄴㅇㄹㅇ"
+        itemArray.append(newItem)
         
+        let newItem2 = Item()
+        newItem2.title = "find mike"
+        itemArray.append(newItem2)
+    
+        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {//데이터가 nil일시 충돌날 수 도 있으므로 if let으로 옵셔널 바인딩, 아이템의 어레이를 되찾아옴 -> as? [Item]
             itemArray = items
-        
         }
     }
-    
-    
     
     //MARK: Add new items
     func naviTabAdd() {
@@ -53,9 +55,12 @@ class TodoListViewController: UITableViewController {
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add item", style: .default) { (action) in
-            self.itemArray.append(textField.text!)
+           
+            let newItem = Item()
+            newItem.title = textField.text!
+            self.itemArray.append(newItem)
             self.defaults.set(self.itemArray, forKey: "TodoListArray")
-            
+          
             self.tableView.reloadData()
         } //클로져 안에서 사용하므로 self.를 써줘야함
         
@@ -78,25 +83,32 @@ class TodoListViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
         let cell = tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath)
+
+        let item = itemArray[indexPath.row]
         
-        cell.textLabel?.text = itemArray[indexPath.row]
+        cell.textLabel?.text = item.title
         
+        //-->Ternary operator<--
+        //value = condition ? valueIfTrue : valueIfFalse
         
+        cell.accessoryType = item.done ? .checkmark : .none //밑의 if문과 같은 기능
+//        if item.done == true {
+//            cell.accessoryType = .checkmark
+//        } else {
+//            cell.accessoryType = .none
+//        }
         return cell
     }
     
     //MARK: Tableview delegate methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(itemArray[indexPath.row])
+//        print(itemArray[indexPath.row])
+
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done//셀 체크
         
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-            
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        } else {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }//셀 체크
-        
+        tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
 }
