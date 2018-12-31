@@ -10,6 +10,7 @@ import UIKit
 import CoreData
 
 @UIApplicationMain
+
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
@@ -57,7 +58,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     // MARK: - Core Data Saving support
     
-    func saveContext () {
+    func saveContext() {
         let context = persistentContainer.viewContext //일시적으로 데이터를 지우고 생성할 수 있는 곳
         if context.hasChanges {
             do {

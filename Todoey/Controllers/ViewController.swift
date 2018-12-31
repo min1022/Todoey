@@ -6,28 +6,45 @@
 //  Copyright © 2018년 GlobalHumanism. All rights reserved.
 //
 
+/* 코어데이터 CRUD 유의사항
+ 1. 컨텍스트를 저장 context.save()
+ 2. 현재 상태를 영속 컨테이너에 commit
+ 3. 영구 저장소에 있는 데이터 변경 시 context.save()에 저장하지 않기 위해 항상 context 호출
+ 4. 조회나 loadItems() 실행 시 영속 컨테이너를 변경할 필요가 없으므로 context를 save할 필요없음. 대신 fetch하고 현재 버전 조회
+ */
+
 import UIKit
+import CoreData
+import SnapKit
 
 class TodoListViewController: UITableViewController {
+    
+    lazy var searchBar : UISearchBar = UISearchBar()
+    
+    //영속성 컨테이너의 view context
+    //UIApplication class
+    //shared: 싱글턴 객체
+    //delegate: 옵셔널 uiapplication 딜리게이트 타입
+    //둘 다 같은 슈퍼클래스에서 상속받기 때문에 앱딜리게이트 클래스로 캐스팅함
+    //앱딜리게이트를 객체로 접근할 수 있음
+    let context = (UIApplication.shared.delegate as! AppDelegate ).persistentContainer.viewContext
+    //Appdelegate라고 쓰는대신 ()로 표기, 클래스 딜리게이트로 다운캐스팅
     
     let cellId = "cellId"
     
     var itemArray = [Item]()
     
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")//영속 코어 데이터 파일 경로
+//    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")//영속 코어 데이터 파일 경로
+    
     //fisrt.에서 append 메소드 불러와서 새로운 커스텀 plist 만들기
     //유저 홈디렉토리 (현재 앱에 아이템 저장하는 장소)
     //documents/ 폴더 안에 plist 생성
     //items.plist에 Item 클래스의 프로퍼티를 적용
     
-    
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-    
-        
-        print(dataFilePath)
+        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
         navigationItem.title = "Todoey"
         navigationController?.navigationBar.prefersLargeTitles = true
@@ -35,21 +52,43 @@ class TodoListViewController: UITableViewController {
 //        tableView.backgroundColor = UIColor(white: 0.95, alpha: 1)
         tableView.backgroundColor = .white
         
+   
+
+        
+        searchBar.delegate = self
+        searchBarLayout()
         naviTabAdd()
         
-        let newItem = Item()
-        newItem.title = "ㄴㅇㄹㅇ"
-        itemArray.append(newItem)
-        
-        let newItem2 = Item()
-        newItem2.title = "find mike"
-        itemArray.append(newItem2)
+        //영속성 컨테이너의 view.context를 얻어와서 context를 context라고 쓸 수 있게됨.
+//        let newItem = Item()
+//        newItem.title = "ㄴㅇㄹㅇ"
+//        self.itemArray.append(newItem)
+//
+//        let newItem2 = Item()
+//        newItem2.title = "find mike"
+//        itemArray.append(newItem2)
     
 //        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {//데이터가 nil일시 충돌날 수 도 있으므로 if let으로 옵셔널 바인딩, 아이템의 어레이를 되찾아옴 -> as? [Item]
 //            itemArray = items
 //        }
-        
         loadItems()
+    }
+    
+    //MARK: SearchBar Layout
+    func searchBarLayout() {
+        
+        searchBar.searchBarStyle = UISearchBar.Style.prominent
+        searchBar.placeholder = " Search..."
+        searchBar.sizeToFit()
+        searchBar.isTranslucent = false
+        view.addSubview(searchBar)
+        
+        searchBar.translatesAutoresizingMaskIntoConstraints = false
+     
+        searchBar.snp.makeConstraints { (make) in
+            make.top.equalToSuperview()
+            make.width.equalToSuperview()
+        }
     }
     
     //MARK: Add new items
@@ -68,8 +107,9 @@ class TodoListViewController: UITableViewController {
         
         let action = UIAlertAction(title: "Add item", style: .default) { (action) in
            
-            let newItem = Item()
+            let newItem = Item(context: self.context)
             newItem.title = textField.text!
+            newItem.done = false
             self.itemArray.append(newItem)
             self.saveItems()
         } //클로져 안에서 사용하므로 self를 써줘야함
@@ -80,43 +120,39 @@ class TodoListViewController: UITableViewController {
             
         } //얼러트 팝업에 텍스트뷰 삽입
         
-        
         alert.addAction(action)
-        
         present(alert, animated: true, completion: nil)
     }
     
     //MARK - Model Manipulation Methods (아이템 저장)
-    func saveItems() {
-        
-        let encoder = PropertyListEncoder()// 새 프로퍼티 리스트 인코더
+    /* 코어 데이터하면서 인코더 지움*/
+    func saveItems() { // Create
         
         do {
-            let data = try encoder.encode(itemArray) //데이터 array -> propertyList로 인코딩
-            try data.write(to: dataFilePath!) //에러 쓰로우 할 수도 있어서 try사용
-            //클로져 빠져나왔기 때문에 self안써도 됨
-            
+          try context.save()
+            //변경사항 생길때 컨테이너에 저장
         } catch {
-            print("Error encoding item array. \(error)")
+            print("Error saving context \(error)")
+          
         }
         self.tableView.reloadData()
     }
     
-    func loadItems() {
+    func loadItems() { //Read
         
-        if let data = try? Data(contentsOf: dataFilePath!) {
-        //메소드 결과를 옵셔널로 나오게 하기 위해 trY? 사용
-        //안전한 옵셔널 언래핑을 위해 옵셔널 바인딩(if let)
-            let decoder = PropertyListDecoder() //property list 디코더 생성
-            do {
-                itemArray = try decoder.decode([Item].self, from: data)
-            } catch {
-                print("error decoding item array. \(error)")
-            }
+        //아이템 형식에 결과를 fetch
+        //Item : 리퀘스트하려고 하는 entity
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        //따라야할 로직 많으므로 데이터타입 구체화 요구됨
+        //데이터타입 지정 안해주면 "Ambiguous use of..." 에러
+        do {
+            itemArray = try context.fetch(request) //빈 request에 현재 영속성 컨테이너에 있는 모두를 넣음
+        //컨텍스트 fetch 저장 안하면 에러 throw함
+        } catch {
+            print("error fetching data from context \(error)")
         }
     }
     
-
     //Mark - tableview DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return itemArray.count
@@ -145,7 +181,18 @@ class TodoListViewController: UITableViewController {
     //MARK: Tableview delegate methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        print(itemArray[indexPath.row])
+        
+        itemArray[indexPath.row].setValue("Completed", forKey: "title")
+        //done표시할때 테이블뷰 타이틀 변경 (Update)
 
+         /* Delete 아이템 배열에서 지우기 전에 먼저 컨텍스트에서 지워야함(순서) */
+//        context.delete(itemArray[indexPath.row])//영속 컨테이너로부터의 데이터 삭제
+//        itemArray.remove(at: indexPath.row)
+        //아이템 배열로부터 현재 아이템 삭제 (테이블뷰 데이터소스 로드)
+        
+        //컨텍스트로부터 데이터를 지우므로 context를 ManagedObject 형으로 구체화시켜줌
+       
+        
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done//셀 체크
         
         saveItems() //마크할때도 저장
@@ -167,3 +214,31 @@ class TodoCell: UITableViewCell {
     }
 }
 
+//MARK: - Search Bar Methods
+extension TodoListViewController : UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        //읽어들이기 위해서 request 생성과 타입 선언
+     
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        //predicate은 데어터가 어떻게 fatched나 filtered 구체화되어야 할때 쓰는 기초 클래스
+        //쿼리 언어 (format string)
+    
+        request.predicate = predicate
+        //쿼리를 reuest에 추가
+        
+        let sortDescriptor = NSSortDescriptor(key: "title", ascending: true)
+        //데이터 정렬
+        
+        request.sortDescriptors = [sortDescriptor]
+        //복수 형태라서 배열 표기해야함
+        
+        do {
+            itemArray = try context.fetch(request) //컨텍스트를 저장소로부터의 결과에 패치
+            //컨텍스트 fetch 저장 안하면 에러 throw함
+        } catch {
+            print("error fetching data from context \(error)")
+        }
+    }
+}
