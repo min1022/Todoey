@@ -46,15 +46,26 @@ class TodoListViewController: UITableViewController {
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        navigationItem.title = "Todoey"
+        navigationItem.title = "Items"
         navigationController?.navigationBar.prefersLargeTitles = true
+//        navigationController?.navigationBar.backgroundColor = UIColor.yellow
         tableView.register(TodoCell.self, forCellReuseIdentifier: cellId)
 //        tableView.backgroundColor = UIColor(white: 0.95, alpha: 1)
         tableView.backgroundColor = .white
+//        tableView.frame = CGRect(x: 0, y: 60, width: self.view.frame.size.width, height: 500)
         
-   
-
-        
+//        guard let headerView = tableView.tableHeaderView else {
+//            return
+//        }
+//
+//        let size = headerView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+//
+//        if headerView.frame.size.height != size.height {
+//            headerView.frame.size.height = size.height
+//
+//        tableView.tableHeaderView = headerView
+//        }
+//
         searchBar.delegate = self
         searchBarLayout()
         naviTabAdd()
@@ -71,7 +82,7 @@ class TodoListViewController: UITableViewController {
 //        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {//데이터가 nil일시 충돌날 수 도 있으므로 if let으로 옵셔널 바인딩, 아이템의 어레이를 되찾아옴 -> as? [Item]
 //            itemArray = items
 //        }
-        loadItems()
+        loadItems() //loadItems
     }
     
     //MARK: SearchBar Layout
@@ -138,11 +149,14 @@ class TodoListViewController: UITableViewController {
         self.tableView.reloadData()
     }
     
-    func loadItems() { //Read
+    //NSFetchRequest<Item> 리퀘스트 인자 받아서 배열로 리턴
+    //with : 외부 인자 (request라는 내부 인자는 현재 블록 안의 코드를 실행, 외부인자는 함수 호출할때 사용)
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()/*default value 설정*/) { //Read
         
         //아이템 형식에 결과를 fetch
         //Item : 리퀘스트하려고 하는 entity
-        let request : NSFetchRequest<Item> = Item.fetchRequest()
+//        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        //패치 리퀘스트 이미 인자로 받아놔서 새 리퀘스트로 이니셜라이징할 필요 없음
         //따라야할 로직 많으므로 데이터타입 구체화 요구됨
         //데이터타입 지정 안해주면 "Ambiguous use of..." 에러
         do {
@@ -221,24 +235,30 @@ extension TodoListViewController : UISearchBarDelegate {
         let request : NSFetchRequest<Item> = Item.fetchRequest()
         //읽어들이기 위해서 request 생성과 타입 선언
      
-        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
         //predicate은 데어터가 어떻게 fatched나 filtered 구체화되어야 할때 쓰는 기초 클래스
         //쿼리 언어 (format string)
-    
-        request.predicate = predicate
+        //cd -> case and diacritic insensitive
         //쿼리를 reuest에 추가
         
-        let sortDescriptor = NSSortDescriptor(key: "title", ascending: true)
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
         //데이터 정렬
-        
-        request.sortDescriptors = [sortDescriptor]
         //복수 형태라서 배열 표기해야함
         
-        do {
-            itemArray = try context.fetch(request) //컨텍스트를 저장소로부터의 결과에 패치
-            //컨텍스트 fetch 저장 안하면 에러 throw함
-        } catch {
-            print("error fetching data from context \(error)")
+        loadItems(with: request)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            
+            //DispatchQueue : 다른 쓰레드(메인)로 승인해주는 매니저 역할
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+            //디스패쳐에게 메인 키를 요청하고 메인 큐에서 위의 메소드를 실햏함
+            //포어그라운드에서 실행됨
+            
         }
     }
 }
