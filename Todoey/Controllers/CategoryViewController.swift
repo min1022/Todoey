@@ -12,15 +12,16 @@ import SnapKit
 
 class CategoryViewController: UITableViewController {
     
-    lazy var searchBar : UISearchBar = UISearchBar()
-
-    let context = (UIApplication.shared.delegate as! AppDelegate ).persistentContainer.viewContext
+    var categories = [Category]()
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext //crud하기 위한 콘텍스트
     let cellId = "cellId"
     
-    var itemArray = [Category]()
+    //  self.navigationController?.pushViewController(nextViewController, animated: true)
     
     override func viewDidLoad() {
         super.viewDidLoad()
+       
+        tableView.register(CategoryCell.self, forCellReuseIdentifier: cellId)
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
@@ -28,79 +29,71 @@ class CategoryViewController: UITableViewController {
         navigationController?.navigationBar.prefersLargeTitles = true
         
         naviTabAdd()
+        loadCategories()
     }
     
-    //MARK: Add new items
+    //MARK: Add new Categories
     func naviTabAdd() {
         
-        let addBtn = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(cellAdd(_:)))
+        let addBtn = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addButtonPressed(_:)))
         
         navigationItem.setRightBarButtonItems([addBtn], animated: true)
     }
     
-    @objc func cellAdd(_ sender: UIBarButtonItem) {
+    @objc func addButtonPressed(_ sender: UIBarButtonItem) {
+        var textField = UITextField()
+        let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
         
-        var textField = UITextField() //alert.add ...에 접근 가능
-        
-        let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
-        
-        let action = UIAlertAction(title: "Add item", style: .default) { (action) in
+        let action = UIAlertAction(title: "Add", style: .default) { (action) in
+            let newCategory = Category(context: self.context) //콘텍스트 구체화
+            newCategory.name = textField.text!
             
-            let newItem = Category(context: self.context)
-            self.saveItems()
-        } //클로져 안에서 사용하므로 self를 써줘야함
-        
-        alert.addTextField { (alertTextField) in //클로져 생성
-            alertTextField.placeholder = "Create new item"
-            textField = alertTextField
+            self.categories.append(newCategory)
             
-        } //얼러트 팝업에 텍스트뷰 삽입
+            self.saveCategories()
+        }
         
         alert.addAction(action)
-        present(alert, animated: true, completion: nil)
+        
+        alert.addTextField { (field) in //클로져 생성, field는 텍스트필드 이름
+            textField = field
+            textField.placeholder = "Add a new category"
+        } //얼러트 팝업에 텍스트뷰 삽입
+        
+        present(alert, animated: true,  completion: nil)
     }
     
-    //MARK - Model Manipulation Methods (아이템 저장)
-    func saveItems() { // Create
-        
+    //MARK - Model Manipulation Methods (카테고리 저장)
+    func saveCategories() { //Create
         do {
             try context.save()
-            //변경사항 생길때 컨테이너에 저장
         } catch {
             print("Error saving context \(error)")
-            
         }
         self.tableView.reloadData()
     }
     
-    //NSFetchRequest<Item> 리퀘스트 인자 받아서 배열로 리턴
-    //with : 외부 인자 (request라는 내부 인자는 현재 블록 안의 코드를 실행, 외부인자는 함수 호출할때 사용)
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()/*default value 설정*/) { //Read
+    func loadCategories() {
         
-        //아이템 형식에 결과를 fetch
-        //Item : 리퀘스트하려고 하는 entity
-        //        let request : NSFetchRequest<Item> = Item.fetchRequest()
-        //패치 리퀘스트 이미 인자로 받아놔서 새 리퀘스트로 이니셜라이징할 필요 없음
-        //따라야할 로직 많으므로 데이터타입 구체화 요구됨
-        //데이터타입 지정 안해주면 "Ambiguous use of..." 에러
+        let request : NSFetchRequest<Category> = Category.fetchRequest()
+        
         do {
-//            itemArray = try context.fetch(request) //빈 request에 현재 영속성 컨테이너에 있는 모두를 넣음
-            //컨텍스트 fetch 저장 안하면 에러 throw함
+            categories = try context.fetch(request)
         } catch {
-            print("error fetching data from context \(error)")
+            print("error loading categories \(error)")
         }
+        tableView.reloadData()
     }
     
     //Mark - tableview DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemArray.count
+        return categories.count
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath)
+        let cell = self.tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath)
         
-        let item = itemArray[indexPath.row]
-        cell.textLabel?.text = item.name
+        cell.textLabel?.text = categories[indexPath.row].name
         
         return cell
     }
@@ -111,12 +104,12 @@ class CategoryViewController: UITableViewController {
 }
 
 class CategoryCell: UITableViewCell {
-    
+
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        
+
     }
-    
+
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
