@@ -8,6 +8,7 @@
 
 import UIKit
 import CoreData
+import RealmSwift
 
 @UIApplicationMain
 
@@ -21,6 +22,18 @@ import CoreData
         window = UIWindow()
         window?.makeKeyAndVisible()
         window?.rootViewController = UINavigationController(rootViewController: CategoryViewController())
+        
+        do {
+            let realm = try Realm()
+        } catch {
+            print("error initializing new realm, \(error)")
+        }
+        
+        let data = Data()
+        data.name = "min"
+        data.age = 15
+        
+        
         
 //        print(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last! as String) //데이터 저장 디렉토리 경로 출력
         

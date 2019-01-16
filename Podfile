@@ -7,6 +7,6 @@ target 'Todoey' do
 
   # Pods for Todoey
 
-pod 'SnapKit', '~> 4.0.0'
-
+   pod 'SnapKit', '~> 4.0.0'
+   pod 'RealmSwift'
 end
