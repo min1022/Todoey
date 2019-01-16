@@ -100,6 +100,18 @@ class CategoryViewController: UITableViewController {
     
     //MARK: Tableview delegate methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+//        self.performSegue(withIdentifier: "goToItems", sender: self)
+    self.navigationController?.pushViewController(TodoListViewController(), animated: true) //segue 대신 사용
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let destinationVC = segue.destination as! TodoListViewController
+        
+        //셀 행 선택
+        if let indexPath = tableView.indexPathForSelectedRow {
+            destinationVC.selectedCategory = categories[indexPath.row] //TodoList뷰컨트롤러에 selectdCategory 프로퍼티 설정해주어야함
+            
+        }
     }
 }
 

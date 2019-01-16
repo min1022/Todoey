@@ -34,6 +34,13 @@ class TodoListViewController: UITableViewController {
     
     var itemArray = [Item]()
     
+    var selectedCategory : Category? {//destinationVC.selectedCategory = categories[indexPath.row] 코드 전까지는 nil일 것이기 때문에 옵셔널 선언
+        didSet {
+            loadItems() //viewdidload에 있던거 옮김
+            //predicate: NSPredicate? = nil로 디폴트갑 설정해서 파라미터없이 그냥쓸 수 있음
+            
+        }//selectedCategory가 값을 갖자마자 실행
+    }
 //    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")//영속 코어 데이터 파일 경로
     
     //fisrt.에서 append 메소드 불러와서 새로운 커스텀 plist 만들기
@@ -82,7 +89,6 @@ class TodoListViewController: UITableViewController {
 //        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {//데이터가 nil일시 충돌날 수 도 있으므로 if let으로 옵셔널 바인딩, 아이템의 어레이를 되찾아옴 -> as? [Item]
 //            itemArray = items
 //        }
-        loadItems() //loadItems
     }
     
     //MARK: SearchBar Layout
@@ -121,6 +127,7 @@ class TodoListViewController: UITableViewController {
             let newItem = Item(context: self.context)
             newItem.title = textField.text!
             newItem.done = false
+            newItem.parentCategory = self.selectedCategory//Category랑 Item 관계설정했으므로 접근가능
             self.itemArray.append(newItem)
             self.saveItems()
         } //클로져 안에서 사용하므로 self를 써줘야함
@@ -151,8 +158,19 @@ class TodoListViewController: UITableViewController {
     
     //NSFetchRequest<Item> 리퀘스트 인자 받아서 배열로 리턴
     //with : 외부 인자 (request라는 내부 인자는 현재 블록 안의 코드를 실행, 외부인자는 함수 호출할때 사용)
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()/*default value 설정*/) { //Read
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil/*default value 설정*/) { //Read
         
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        //카테고리의 이름 프로퍼티가 선택된 현재 카테고리의 이름과 반드시 매치되어야함
+        //필터링해서 패런트카테고리와 매치되는 현재 선택된 카테고리의 이름만을 가짐
+        
+        //additionalPredicate -> unwrapped
+        if let additionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
+
         //아이템 형식에 결과를 fetch
         //Item : 리퀘스트하려고 하는 entity
 //        let request : NSFetchRequest<Item> = Item.fetchRequest()
@@ -245,7 +263,7 @@ extension TodoListViewController : UISearchBarDelegate {
         //데이터 정렬
         //복수 형태라서 배열 표기해야함
         
-        loadItems(with: request)
+        loadItems()
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
