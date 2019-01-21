@@ -14,12 +14,16 @@
  */
 
 import UIKit
-import CoreData
+import RealmSwift
 import SnapKit
 
 class TodoListViewController: UITableViewController {
     
+    var todoItems: Results<ItemRealm>?
+    
     lazy var searchBar : UISearchBar = UISearchBar()
+    
+    let realm = try! Realm()
     
     //영속성 컨테이너의 view context
     //UIApplication class
@@ -27,14 +31,11 @@ class TodoListViewController: UITableViewController {
     //delegate: 옵셔널 uiapplication 딜리게이트 타입
     //둘 다 같은 슈퍼클래스에서 상속받기 때문에 앱딜리게이트 클래스로 캐스팅함
     //앱딜리게이트를 객체로 접근할 수 있음
-    let context = (UIApplication.shared.delegate as! AppDelegate ).persistentContainer.viewContext
     //Appdelegate라고 쓰는대신 ()로 표기, 클래스 딜리게이트로 다운캐스팅
     
     let cellId = "cellId"
     
-    var itemArray = [Item]()
-    
-    var selectedCategory : Category? {//destinationVC.selectedCategory = categories[indexPath.row] 코드 전까지는 nil일 것이기 때문에 옵셔널 선언
+    var selectedCategory : CategoryRealm? {//destinationVC.selectedCategory = categories[indexPath.row] 코드 전까지는 nil일 것이기 때문에 옵셔널 선언
         didSet {
             loadItems() //viewdidload에 있던거 옮김
             //predicate: NSPredicate? = nil로 디폴트갑 설정해서 파라미터없이 그냥쓸 수 있음
@@ -73,7 +74,7 @@ class TodoListViewController: UITableViewController {
 //        tableView.tableHeaderView = headerView
 //        }
 //
-        searchBar.delegate = self
+        searchBar.delegate = self as? UISearchBarDelegate
         searchBarLayout()
         naviTabAdd()
         
@@ -118,19 +119,34 @@ class TodoListViewController: UITableViewController {
     
     @objc func cellAdd(_ sender: UIBarButtonItem) {
         
+        print("렘0 \(self.selectedCategory)")
+        
         var textField = UITextField() //alert.add ...에 접근 가능
         
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Add item", style: .default) { (action) in
-           
-            let newItem = Item(context: self.context)
-            newItem.title = textField.text!
-            newItem.done = false
-            newItem.parentCategory = self.selectedCategory//Category랑 Item 관계설정했으므로 접근가능
-            self.itemArray.append(newItem)
-            self.saveItems()
-        } //클로져 안에서 사용하므로 self를 써줘야함
+           //newItem.parentCategory = self.selectedCategory//Category랑 Item 관계설정했으므로 접근가능 -코어데이터 코드 대체-
+        if let currentCategory = self.selectedCategory { //nil일 경우 대비해서 옵셔널 바인딩
+          
+            print("렘1 \(currentCategory)")
+            do {
+                try self.realm.write {
+                    let newItem = ItemRealm()
+                    newItem.title = textField.text!
+                    currentCategory.items.append(newItem)
+                    //self.itemArray.append(newItem) -코어데이터 코드 대체-
+                    
+                    print("렘2 \(newItem)")
+                    
+                    }
+                } catch {
+                    print("Error saving new items, \(error)")
+            }
+        }
+            self.tableView.reloadData()
+//            self.saveItems()
+    } //클로져 안에서 사용하므로 self를 써줘야함
         
         alert.addTextField { (alertTextField) in //클로져 생성
             alertTextField.placeholder = "Create new item"
@@ -144,22 +160,22 @@ class TodoListViewController: UITableViewController {
     
     //MARK - Model Manipulation Methods (아이템 저장)
     /* 코어 데이터하면서 인코더 지움*/
-    func saveItems() { // Create
-        
-        do {
-          try context.save()
-            //변경사항 생길때 컨테이너에 저장
-        } catch {
-            print("Error saving context \(error)")
-          
-        }
-        self.tableView.reloadData()
-    }
+//    func saveItems() { // Create
+//
+//        do {
+//          try context.save()
+//            //변경사항 생길때 컨테이너에 저장
+//        } catch {
+//            print("Error saving context \(error)")
+//
+//        }
+//        self.tableView.reloadData()
+//    }
     
     //NSFetchRequest<Item> 리퀘스트 인자 받아서 배열로 리턴
     //with : 외부 인자 (request라는 내부 인자는 현재 블록 안의 코드를 실행, 외부인자는 함수 호출할때 사용)
-//    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil/*default value 설정*/) { //Read
-//
+    func loadItems() { //Read
+        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
 //        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
 //        //카테고리의 이름 프로퍼티가 선택된 현재 카테고리의 이름과 반드시 매치되어야함
 //        //필터링해서 패런트카테고리와 매치되는 현재 선택된 카테고리의 이름만을 가짐
@@ -182,32 +198,42 @@ class TodoListViewController: UITableViewController {
 //        //컨텍스트 fetch 저장 안하면 에러 throw함
 //        } catch {
 //            print("error fetching data from context \(error)")
-//        }
-//        tableView.reloadData()
+//        } //********코어 데이터****************
+        
+        print("렘")
+        
+        tableView.reloadData()
     }
     
     //Mark - tableview DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemArray.count
+        return todoItems?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
+        
         let cell = tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath)
 
-        let item = itemArray[indexPath.row]
+        if let item = todoItems?[indexPath.row] {
+            
+            cell.textLabel?.text = item.title
+            
+            //-->Ternary operator<--
+            //value = condition ? valueIfTrue : valueIfFalse
+            
+            cell.accessoryType = item.done ? .checkmark : .none //밑의 if문과 같은 기능
+            
+            //        if item.done == true {
+            //            cell.accessoryType = .checkmark
+            //        } else {
+            //            cell.accessoryType = .none
+            //        }
+        } else {
+            cell.textLabel?.text = "No Items Added"
+        }
         
-        cell.textLabel?.text = item.title
         
-        //-->Ternary operator<--
-        //value = condition ? valueIfTrue : valueIfFalse
-        
-        cell.accessoryType = item.done ? .checkmark : .none //밑의 if문과 같은 기능
-//        if item.done == true {
-//            cell.accessoryType = .checkmark
-//        } else {
-//            cell.accessoryType = .none
-//        }
         return cell
     }
     
@@ -215,7 +241,20 @@ class TodoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        print(itemArray[indexPath.row])
         
-        itemArray[indexPath.row].setValue("Completed", forKey: "title")
+        if let item = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    item.done = !item.done
+                }
+            } catch {
+                    print("error saving done status, \(error)")
+            }
+        }
+        
+        tableView.reloadData() //cellforrowat indexpath 호출
+        
+        
+//        todoItems?[indexPath.row].setValue("Completed", forKey: "title")
         //done표시할때 테이블뷰 타이틀 변경 (Update)
 
          /* Delete 아이템 배열에서 지우기 전에 먼저 컨텍스트에서 지워야함(순서) */
@@ -226,9 +265,9 @@ class TodoListViewController: UITableViewController {
         //컨텍스트로부터 데이터를 지우므로 context를 ManagedObject 형으로 구체화시켜줌
        
         
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done//셀 체크
-        
-        saveItems() //마크할때도 저장
+//        todoItems?[indexPath.row].done = !todoItems[indexPath.row].done//셀 체크
+//
+//        saveItems() //마크할때도 저장
         
 //        tableView.reloadData() //saveItems() 안에 있기 때문에 지워도 됨
         tableView.deselectRow(at: indexPath, animated: true)
@@ -248,36 +287,38 @@ class TodoCell: UITableViewCell {
 }
 
 //MARK: - Search Bar Methods
-//extension TodoListViewController : UISearchBarDelegate {
-//    
-//    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+extension TodoListViewController : UISearchBarDelegate {
+//
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        todoitem = todoItems.filter
 //        let request : NSFetchRequest<Item> = Item.fetchRequest()
-//        //읽어들이기 위해서 request 생성과 타입 선언
-//     
+        //읽어들이기 위해서 request 생성과 타입 선언
+     
 //        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
 //        //predicate은 데어터가 어떻게 fatched나 filtered 구체화되어야 할때 쓰는 기초 클래스
 //        //쿼리 언어 (format string)
 //        //cd -> case and diacritic insensitive
 //        //쿼리를 reuest에 추가
-//        
+//
 //        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
 //        //데이터 정렬
 //        //복수 형태라서 배열 표기해야함
-//        
+//
 //        loadItems()
-//    }
-//    
-//    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-//        if searchBar.text?.count == 0 {
-//            loadItems()
-//            
-//            //DispatchQueue : 다른 쓰레드(메인)로 승인해주는 매니저 역할
-//            DispatchQueue.main.async {
-//                searchBar.resignFirstResponder()
-//            }
-//            //디스패쳐에게 메인 키를 요청하고 메인 큐에서 위의 메소드를 실햏함
-//            //포어그라운드에서 실행됨
-//            
-//        }
-//    }
-//}
+    }
+
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            
+            //DispatchQueue : 다른 쓰레드(메인)로 승인해주는 매니저 역할
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+            //디스패쳐에게 메인 키를 요청하고 메인 큐에서 위의 메소드를 실햏함
+            //포어그라운드에서 실행됨
+            
+        }
+    }
+}

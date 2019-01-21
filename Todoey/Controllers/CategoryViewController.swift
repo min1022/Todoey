@@ -16,28 +16,30 @@ class CategoryViewController: UITableViewController {
     //MARK: Initialize a new realm
     let realm = try! Realm()
     
-    var categories = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext //crud하기 위한 콘텍스트
+    //Results -> realm의 자동 업데이트 컨테이너 타입
+    var categories: Results<CategoryRealm>? //닐값 감수해서 옵셔널 선언
     let cellId = "cellId"
     
     override func viewDidLoad() {
         super.viewDidLoad()
        
         tableView.register(CategoryCell.self, forCellReuseIdentifier: cellId)
-        
-        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-        
+  
         navigationItem.title = "Todoey"
         navigationController?.navigationBar.prefersLargeTitles = true
         
         naviTabAdd()
         loadCategories()
+        
+  
     }
+    
+   
     
     //MARK: Add new Categories
     func naviTabAdd() {
         
-        let addBtn = UIBarButtonItem(barButtonSystemItem: .undo, target: self, action: #selector(addButtonPressed(_:)))
+        let addBtn = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addButtonPressed(_:)))
         
         navigationItem.setRightBarButtonItems([addBtn], animated: true)
     }
@@ -48,11 +50,15 @@ class CategoryViewController: UITableViewController {
         
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
 //            let newCategory = Category(context: self.context) //콘텍스트 구체화
-            let newCategory = Category()
+            let newCategory = CategoryRealm()
             newCategory.name = textField.text!
             
-            self.categories.append(newCategory)
-            self.save(category: newCategory)
+//            self.categories.append(newCategory) realm 컨테이너에서 자동업데이트 되ㅁ로 필요없음
+            self.save(category: newCategory)  //realm 컨테이너에 저장
+            
+//            self.performSegue(withIdentifier: "todoItems", sender: sender.self)
+            
+            
         }
         
         alert.addAction(action)
@@ -66,7 +72,7 @@ class CategoryViewController: UITableViewController {
     }
     
     //MARK - Model Manipulation Methods (카테고리 저장)
-    func save(category: Category) { //Create
+    func save(category: CategoryRealm) { //Create
         do {
 //            try context.save()
             try realm.write {
@@ -79,42 +85,55 @@ class CategoryViewController: UITableViewController {
     }
     
     func loadCategories() {
-//        
+        
+        //realm안의 item 전부를 꺼내옴
+        categories = realm.objects(CategoryRealm.self)
+        
+        //CoreData 코드
 //        let request : NSFetchRequest<Category> = Category.fetchRequest()
-//        
+//
 //        do {
 //            categories = try context.fetch(request)
 //        } catch {
 //            print("error loading categories \(error)")
 //        }
-//        tableView.reloadData()
+        tableView.reloadData()
     }
     
     //Mark - tableview DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categories.count
+        return categories?.count ?? 1 //nil이면 1 리턴, ??는 nil coalescing operator
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = self.tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath)
         
-        cell.textLabel?.text = categories[indexPath.row].name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories Added Yet"
         
         return cell
     }
     
     //MARK: Tableview delegate methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-//        self.performSegue(withIdentifier: "goToItems", sender: self)
-    self.navigationController?.pushViewController(TodoListViewController(), animated: true) //segue 대신 사용
+//        self.performSegue(withIdentifier: "todoItems", sender: self)
+        self.navigationController?.pushViewController(TodoListViewController(), animated: true) //segue 대신 사용
     }
+ 
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        let destinationVC = segue.destination as! TodoListViewController
         
+        DispatchQueue.main.async {
+            self.performSegue(withIdentifier: "todoItems", sender: self)
+        }
         //셀 행 선택
-        if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categories[indexPath.row] //TodoList뷰컨트롤러에 selectdCategory 프로퍼티 설정해주어야함
+        if (segue.identifier == "todoItems") {
+            let destinationVC = segue.destination as! TodoListViewController
+            if let indexPath = tableView.indexPathForSelectedRow {
+            destinationVC.selectedCategory = categories?[indexPath.row] //TodoList뷰컨트롤러에 selectdCategory 프로퍼티 설정해주어야함
+            
+            print(destinationVC.selectedCategory)
+            
+            }
         }
     }
 }
