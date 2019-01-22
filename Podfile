@@ -9,4 +9,5 @@ target 'Todoey' do
 
    pod 'SnapKit', '~> 4.0.0'
    pod 'RealmSwift'
+   pod 'SwipeCellKit'
 end
