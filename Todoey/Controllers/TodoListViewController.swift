@@ -134,6 +134,7 @@ class TodoListViewController: UITableViewController {
                 try self.realm.write {
                     let newItem = ItemRealm()
                     newItem.title = textField.text!
+                    newItem.dateCreated = Date()
                     currentCategory.items.append(newItem)
                     //self.itemArray.append(newItem) -코어데이터 코드 대체-
                     
@@ -232,8 +233,6 @@ class TodoListViewController: UITableViewController {
         } else {
             cell.textLabel?.text = "No Items Added"
         }
-        
-        
         return cell
     }
     
@@ -243,8 +242,8 @@ class TodoListViewController: UITableViewController {
         
         if let item = todoItems?[indexPath.row] {
             do {
-                try realm.write {
-                    item.done = !item.done
+                try realm.write { //update values
+                    item.done = !item.done //toggle property opposite
                 }
             } catch {
                     print("error saving done status, \(error)")
@@ -252,7 +251,7 @@ class TodoListViewController: UITableViewController {
         }
         
         tableView.reloadData() //cellforrowat indexpath 호출
-        
+        tableView.deselectRow(at: indexPath, animated: true)
         
 //        todoItems?[indexPath.row].setValue("Completed", forKey: "title")
         //done표시할때 테이블뷰 타이틀 변경 (Update)
@@ -270,7 +269,7 @@ class TodoListViewController: UITableViewController {
 //        saveItems() //마크할때도 저장
         
 //        tableView.reloadData() //saveItems() 안에 있기 때문에 지워도 됨
-        tableView.deselectRow(at: indexPath, animated: true)
+       
     }
 }
 
@@ -291,7 +290,7 @@ extension TodoListViewController : UISearchBarDelegate {
 //
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         
-        todoitem = todoItems.filter
+        todoItems = todoItems?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
 //        let request : NSFetchRequest<Item> = Item.fetchRequest()
         //읽어들이기 위해서 request 생성과 타입 선언
      
@@ -306,6 +305,8 @@ extension TodoListViewController : UISearchBarDelegate {
 //        //복수 형태라서 배열 표기해야함
 //
 //        loadItems()
+        
+        tableView.reloadData()
     }
 
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {

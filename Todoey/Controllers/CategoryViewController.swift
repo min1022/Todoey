@@ -115,6 +115,8 @@ class CategoryViewController: UITableViewController {
     
     //MARK: Tableview delegate methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+//        performSegue(withIdentifier: "goToItems", sender: self)
 //        self.performSegue(withIdentifier: "todoItems", sender: self)
         self.navigationController?.pushViewController(TodoListViewController(), animated: true) //segue 대신 사용
     }
@@ -123,7 +125,7 @@ class CategoryViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         
         DispatchQueue.main.async {
-            self.performSegue(withIdentifier: "todoItems", sender: self)
+            self.performSegue(withIdentifier: "goToItems", sender: self)
         }
         //셀 행 선택
         if (segue.identifier == "todoItems") {
