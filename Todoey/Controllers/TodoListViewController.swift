@@ -18,7 +18,7 @@ import RealmSwift
 import SnapKit
 
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
     
     var todoItems: Results<ItemRealm>?
     
@@ -34,7 +34,7 @@ class TodoListViewController: UITableViewController {
     //앱딜리게이트를 객체로 접근할 수 있음
     //Appdelegate라고 쓰는대신 ()로 표기, 클래스 딜리게이트로 다운캐스팅
     
-    let cellId = "cellId"
+//    let cellId = "cellId"
     
     var selectedCategory : CategoryRealm? {//destinationVC.selectedCategory = categories[indexPath.row] 코드 전까지는 nil일 것이기 때문에 옵셔널 선언
         didSet {
@@ -202,9 +202,19 @@ class TodoListViewController: UITableViewController {
 //            print("error fetching data from context \(error)")
 //        } //********코어 데이터****************
         
-        print("렘")
-        
         tableView.reloadData()
+    }
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let item = todoItems?[indexPath.row] {
+            do {
+            try realm.write {
+                realm.delete(item)
+                }
+            } catch {
+                print("error deleting item, \(error)")
+            }
+        }
     }
     
     //Mark - tableview DataSource Methods
@@ -212,17 +222,14 @@ class TodoListViewController: UITableViewController {
         return todoItems?.count ?? 1
     }
     
-//    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-//        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") as! SwipeTableViewCell
-//        cell.delegate = self
-//        return cell
-//    }
-    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath)
+//        let cell = tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath)
 
+        //superclass 테이블뷰 셀 불러옴
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
         if let item = todoItems?[indexPath.row] {
             
             cell.textLabel?.text = item.title
@@ -280,17 +287,17 @@ class TodoListViewController: UITableViewController {
     }
 }
 
-class TodoCell: UITableViewCell {
-    
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
+//class TodoCell: UITableViewCell {
+//    
+//    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+//        super.init(style: style, reuseIdentifier: reuseIdentifier)
+//        
+//    }
+//    
+//    required init?(coder aDecoder: NSCoder) {
+//        fatalError("init(coder:) has not been implemented")
+//    }
+//}
 
 //MARK: - Search Bar Methods
 extension TodoListViewController : UISearchBarDelegate {

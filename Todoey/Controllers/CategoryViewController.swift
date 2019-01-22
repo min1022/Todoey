@@ -10,16 +10,16 @@ import UIKit
 //import CoreData
 import SnapKit
 import RealmSwift
-import SwipeCellKit
+//import SwipeCellKit
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController { //Swipe컨트롤러가 uitableview, swipetabledelegate 다 가지고 있음
     
     //MARK: Initialize a new realm
     let realm = try! Realm()
     
     //Results -> realm의 자동 업데이트 컨테이너 타입
     var categories: Results<CategoryRealm>? //닐값 감수해서 옵셔널 선언
-    let cellId = "cellId"
+//    let cellId = "cellId"
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -55,8 +55,6 @@ class CategoryViewController: UITableViewController {
             self.save(category: newCategory)  //realm 컨테이너에 저장
             
 //            self.performSegue(withIdentifier: "todoItems", sender: sender.self)
-            
-            
         }
         
         alert.addAction(action)
@@ -98,30 +96,45 @@ class CategoryViewController: UITableViewController {
         tableView.reloadData()
     }
     
+    //MARK - Delete data from Swipe (삭제)
+    //슈퍼클래스의 updateModel 함수 재정의
+    override func updateModel(at indexPath: IndexPath) {
+        
+//        super.updateModel(at: indexPath) //Superclass 호출(슈퍼클래스 프린트문력출력)
+        
+        if let categoryForDeletion = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(categoryForDeletion)
+                }
+            } catch {
+                print("Error deleting category \(error)")
+            }
+            //tableView.reloadDatsa()
+        }
+    }
+    
     //Mark - tableview DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return categories?.count ?? 1 //nil이면 1 리턴, ??는 nil coalescing operator
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = self.tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath) as! SwipeTableViewCell
+
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories Added Yet"
-        
-        cell.delegate = self
-        
+
         return cell
     }
     
     //MARK: Tableview delegate methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
 //        performSegue(withIdentifier: "goToItems", sender: self)
 //        self.performSegue(withIdentifier: "todoItems", sender: self)
         self.navigationController?.pushViewController(TodoListViewController(), animated: true) //segue 대신 사용
     }
  
-    
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         
         DispatchQueue.main.async {
@@ -140,54 +153,15 @@ class CategoryViewController: UITableViewController {
     }
 }
 
-class CategoryCell: SwipeTableViewCell {
+//class CategoryCell: UITableViewCell {
+//    
+//    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+//        super.init(style: style, reuseIdentifier: reuseIdentifier)
+//
+//    }
+//
+//    required init?(coder aDecoder: NSCoder) {
+//        fatalError("init(coder:) has not been implemented")
+//    }
+//}
 
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-
-    }
-
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
-
-//MARK: - Swipe Cell Delegate Methods
-extension CategoryViewController: SwipeTableViewCellDelegate {
-    
-    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> [SwipeAction]? {
-        guard orientation == .right else { return nil }
-        //checking orientation of swipe (from the right)
-        
-        let deleteAction = SwipeAction(style: .destructive, title: "Delete") { action, indexPath in
-            // handle action by updating model with deletion
-            // closure that handles what should happen when the cell gets swiped
-            
-            //update the realm
-            
-            if let categoryForDeletion = self.categories?[indexPath.row] {
-            do {
-                try self.realm.write {
-                    self.realm.delete(categoryForDeletion)
-                }
-            } catch {
-                print("Error deleting category \(error)")
-            }
-//          tableView.reloadDatsa()
-        }
-    }
-        // customize the action appearance
-        deleteAction.image = UIImage(named: "delete-icon")
-        //셀 스와이프 시 보여주는 셀의 한 부분에 이미지 추가
-        
-        return [deleteAction]
-        //삭제 액션 반환 
-    }
-    
-    func tableView(_ tableView: UITableView, editActionsOptionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> SwipeOptions {
-        var options = SwipeOptions()
-        options.expansionStyle = .destructive //클릭없이 삭제가능한 옵션
-//        options.transitionStyle = .border
-        return options
-    }
-}
