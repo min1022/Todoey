@@ -6,12 +6,6 @@
 //  Copyright © 2018년 GlobalHumanism. All rights reserved.
 //
 
-/* 코어데이터 CRUD 유의사항
- 1. 컨텍스트를 저장 context.save()
- 2. 현재 상태를 영속 컨테이너에 commit
- 3. 영구 저장소에 있는 데이터 변경 시 context.save()에 저장하지 않기 위해 항상 context 호출
- 4. 조회나 loadItems() 실행 시 영속 컨테이너를 변경할 필요가 없으므로 context를 save할 필요없음. 대신 fetch하고 현재 버전 조회
- */
 
 import UIKit
 import RealmSwift
@@ -26,16 +20,6 @@ class TodoListViewController: SwipeTableViewController {
     
     let realm = try! Realm()
     
-    //영속성 컨테이너의 view context
-    //UIApplication class
-    //shared: 싱글턴 객체
-    //delegate: 옵셔널 uiapplication 딜리게이트 타입
-    //둘 다 같은 슈퍼클래스에서 상속받기 때문에 앱딜리게이트 클래스로 캐스팅함
-    //앱딜리게이트를 객체로 접근할 수 있음
-    //Appdelegate라고 쓰는대신 ()로 표기, 클래스 딜리게이트로 다운캐스팅
-    
-//    let cellId = "cellId"
-    
     var selectedCategory : CategoryRealm? {//destinationVC.selectedCategory = categories[indexPath.row] 코드 전까지는 nil일 것이기 때문에 옵셔널 선언
         didSet {
             loadItems() //viewdidload에 있던거 옮김
@@ -43,12 +27,7 @@ class TodoListViewController: SwipeTableViewController {
             
         }//selectedCategory가 값을 갖자마자 실행
     }
-//    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")//영속 코어 데이터 파일 경로
-    
-    //fisrt.에서 append 메소드 불러와서 새로운 커스텀 plist 만들기
-    //유저 홈디렉토리 (현재 앱에 아이템 저장하는 장소)
-    //documents/ 폴더 안에 plist 생성
-    //items.plist에 Item 클래스의 프로퍼티를 적용
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -62,35 +41,10 @@ class TodoListViewController: SwipeTableViewController {
 //        tableView.backgroundColor = UIColor(white: 0.95, alpha: 1)
         tableView.backgroundColor = .white
 //        tableView.frame = CGRect(x: 0, y: 60, width: self.view.frame.size.width, height: 500)
-        
-//        guard let headerView = tableView.tableHeaderView else {
-//            return
-//        }
-//
-//        let size = headerView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
-//
-//        if headerView.frame.size.height != size.height {
-//            headerView.frame.size.height = size.height
-//
-//        tableView.tableHeaderView = headerView
-//        }
-//
+ 
         searchBar.delegate = self as? UISearchBarDelegate
         searchBarLayout()
         naviTabAdd()
-        
-        //영속성 컨테이너의 view.context를 얻어와서 context를 context라고 쓸 수 있게됨.
-//        let newItem = Item()
-//        newItem.title = "ㄴㅇㄹㅇ"
-//        self.itemArray.append(newItem)
-//
-//        let newItem2 = Item()
-//        newItem2.title = "find mike"
-//        itemArray.append(newItem2)
-    
-//        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {//데이터가 nil일시 충돌날 수 도 있으므로 if let으로 옵셔널 바인딩, 아이템의 어레이를 되찾아옴 -> as? [Item]
-//            itemArray = items
-//        }
     }
     
     //MARK: SearchBar Layout
@@ -159,21 +113,7 @@ class TodoListViewController: SwipeTableViewController {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
-    
-    //MARK - Model Manipulation Methods (아이템 저장)
-    /* 코어 데이터하면서 인코더 지움*/
-//    func saveItems() { // Create
-//
-//        do {
-//          try context.save()
-//            //변경사항 생길때 컨테이너에 저장
-//        } catch {
-//            print("Error saving context \(error)")
-//
-//        }
-//        self.tableView.reloadData()
-//    }
-    
+   
     //NSFetchRequest<Item> 리퀘스트 인자 받아서 배열로 리턴
     //with : 외부 인자 (request라는 내부 인자는 현재 블록 안의 코드를 실행, 외부인자는 함수 호출할때 사용)
     func loadItems() { //Read
@@ -238,12 +178,7 @@ class TodoListViewController: SwipeTableViewController {
             //value = condition ? valueIfTrue : valueIfFalse
             
             cell.accessoryType = item.done ? .checkmark : .none //밑의 if문과 같은 기능
-            
-            //        if item.done == true {
-            //            cell.accessoryType = .checkmark
-            //        } else {
-            //            cell.accessoryType = .none
-            //        }
+
         } else {
             cell.textLabel?.text = "No Items Added"
         }
@@ -266,24 +201,6 @@ class TodoListViewController: SwipeTableViewController {
         
         tableView.reloadData() //cellforrowat indexpath 호출
         tableView.deselectRow(at: indexPath, animated: true)
-        
-//        todoItems?[indexPath.row].setValue("Completed", forKey: "title")
-        //done표시할때 테이블뷰 타이틀 변경 (Update)
-
-         /* Delete 아이템 배열에서 지우기 전에 먼저 컨텍스트에서 지워야함(순서) */
-//        context.delete(itemArray[indexPath.row])//영속 컨테이너로부터의 데이터 삭제
-//        itemArray.remove(at: indexPath.row)
-        //아이템 배열로부터 현재 아이템 삭제 (테이블뷰 데이터소스 로드)
-        
-        //컨텍스트로부터 데이터를 지우므로 context를 ManagedObject 형으로 구체화시켜줌
-       
-        
-//        todoItems?[indexPath.row].done = !todoItems[indexPath.row].done//셀 체크
-//
-//        saveItems() //마크할때도 저장
-        
-//        tableView.reloadData() //saveItems() 안에 있기 때문에 지워도 됨
-       
     }
 }
 
@@ -305,21 +222,6 @@ extension TodoListViewController : UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         
         todoItems = todoItems?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
-//        let request : NSFetchRequest<Item> = Item.fetchRequest()
-        //읽어들이기 위해서 request 생성과 타입 선언
-     
-//        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-//        //predicate은 데어터가 어떻게 fatched나 filtered 구체화되어야 할때 쓰는 기초 클래스
-//        //쿼리 언어 (format string)
-//        //cd -> case and diacritic insensitive
-//        //쿼리를 reuest에 추가
-//
-//        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-//        //데이터 정렬
-//        //복수 형태라서 배열 표기해야함
-//
-//        loadItems()
-        
         tableView.reloadData()
     }
 
